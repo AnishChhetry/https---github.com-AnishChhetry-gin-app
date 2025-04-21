@@ -3,11 +3,11 @@ name: Deploy to Server via SSH
 on:
   push:
     branches:
-      - master  # or 'master'
+      - main  # or 'master'
 
 jobs:
   deploy:
-    name: Deploy to Remote Server
+    name: Deploy to Amazon Linux Server
     runs-on: ubuntu-latest
 
     steps:
@@ -29,10 +29,20 @@ jobs:
       - name: Deploy Application
         run: |
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+            set -e
             cd /home/ec2-user/simple-gin-app
-            pkill -f ./myapp
-            git pull origin master
+
+            echo "Stopping existing app (if running)..."
+            pkill -f ./myapp || true
+
+            echo "Updating source..."
+            git pull origin main  # or 'master' if that's your branch
+
+            echo "Building Go app..."
+            export PATH=$PATH:/usr/local/go/bin  # Adjust if Go is installed elsewhere
             go build -o myapp main.go
+
+            echo "Starting app in background..."
             nohup ./myapp > myapp.log 2>&1 &
           EOF
         shell: bash
